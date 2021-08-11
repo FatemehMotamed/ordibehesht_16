@@ -27,6 +27,8 @@ import app.akexorcist.bluetotohspp.library.BluetoothSPP;
 import app.akexorcist.bluetotohspp.library.BluetoothState;
 import app.akexorcist.bluetotohspp.library.DeviceList;
 
+import static app.akexorcist.bluetotohspp.library.BluetoothState.REQUEST_ENABLE_BT;
+
 public class MainActivity extends AppCompatActivity {
 
     BluetoothSPP bt;
@@ -50,8 +52,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -91,16 +91,46 @@ public class MainActivity extends AppCompatActivity {
         out_fan= findViewById(R.id.out_fan);
         out_pomp= findViewById(R.id.out_pomp);
 
-
-
+        textStatus.setEnabled(false);
+        out_humidity.setEnabled(false);
+        out_light.setEnabled(false);
+        out_fan.setEnabled(false);
+        out_pomp.setEnabled(false);
 
         bt = new BluetoothSPP(this);
 
+        bt.setBluetoothConnectionListener(new BluetoothSPP.BluetoothConnectionListener() {
+            @Override
+            public void onDeviceConnected(String name, String address) {
+                textStatus.setText("Connect to "+name);
+            }
 
+            @Override
+            public void onDeviceDisconnected() {
+                textStatus.setText("Disconnected");
+            }
 
+            @Override
+            public void onDeviceConnectionFailed() {
+                textStatus.setText("Connect failed");
+            }
+        });
 
+    }
 
-
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(!bt.isBluetoothEnabled()){
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+        else{
+            if(!bt.isServiceAvailable()){
+                bt.setupService();
+                bt.startService(BluetoothState.DEVICE_OTHER);
+            }
+        }
 
     }
 
@@ -118,7 +148,9 @@ public class MainActivity extends AppCompatActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if(id == R.id.menu_android_connect) {
-
+            bt.setDeviceTarget(BluetoothState.DEVICE_OTHER);
+            Intent intent = new Intent(getApplicationContext(), DeviceList.class);
+            startActivityForResult(intent, BluetoothState.REQUEST_CONNECT_DEVICE);
         }
         return super.onOptionsItemSelected(item);
     }
